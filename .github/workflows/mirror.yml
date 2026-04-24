@@ -11,56 +11,47 @@ on:
       target_branch:
         description: "Target branch"
         required: true
-        default: "main"
-
-      target_repo_url:
-        description: "Target repo (github.com/org/repo.git)"
-        required: true
-
-      target_username:
-        description: "Git username"
-        required: true
+        default: "test"
 
 jobs:
   mirror:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout source repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+      - name: Install Git
+        run: sudo apt-get update && sudo apt-get install -y git
+
+      - name: Clone from Assembla (source)
+        run: |
+          git clone https://${{ secrets.ASSEMBLA_USERNAME }}:${{ secrets.ASSEMBLA_TOKEN }}@git.assembla.com/jagadeesh12/Test.test.git repo
+          cd repo
+          git checkout ${{ github.event.inputs.source_branch }}
 
       - name: Configure Git
         run: |
           git config --global user.name "ci-bot"
           git config --global user.email "ci@example.com"
 
-      - name: Set up credentials securely
+      - name: Setup target credentials securely
         run: |
           cat <<EOF > ~/.git-credentials
-          https://${{ github.event.inputs.target_username }}:${{ secrets.TARGET_TOKEN }}@${{ github.event.inputs.target_repo_url }}
+          https://${{ secrets.TARGET_USERNAME }}:${{ secrets.TARGET_TOKEN }}@github.com/ORG/REPO.git
           EOF
           git config --global credential.helper store
 
       - name: Add target remote
         run: |
-          git remote add target https://${{ github.event.inputs.target_repo_url }}
+          cd repo
+          git remote add target https://github.com/ORG/REPO.git
 
       - name: Fetch target
         run: |
+          cd repo
           git fetch target || true
-
-      - name: Check if branch exists
-        run: |
-          if git ls-remote --heads target ${{ github.event.inputs.target_branch }} | grep -q ${{ github.event.inputs.target_branch }}; then
-            echo "Target branch exists"
-          else
-            echo "Target branch will be created"
-          fi
 
       - name: Push mirror
         run: |
+          cd repo
           git push target \
             ${{ github.event.inputs.source_branch }}:${{ github.event.inputs.target_branch }} \
             --force
