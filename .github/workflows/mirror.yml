@@ -1,17 +1,41 @@
-name: Mirror Repository
+name: Generic Mirror (All Inputs)
 
 on:
   workflow_dispatch:
     inputs:
+      source_repo:
+        description: "Source repo (github.com/org/repo.git)"
+        required: true
+
       source_branch:
         description: "Source branch"
         required: true
         default: "main"
 
+      source_username:
+        description: "Source username"
+        required: true
+
+      source_token:
+        description: "Source token"
+        required: true
+
+      target_repo:
+        description: "Target repo (git.assembla.com/... or github.com/...)"
+        required: true
+
       target_branch:
         description: "Target branch"
         required: true
-        default: "test"
+        default: "main"
+
+      target_username:
+        description: "Target username"
+        required: true
+
+      target_token:
+        description: "Target token"
+        required: true
 
 jobs:
   mirror:
@@ -21,9 +45,9 @@ jobs:
       - name: Install Git
         run: sudo apt-get update && sudo apt-get install -y git
 
-      - name: Clone from Assembla (source)
+      - name: Clone source repository
         run: |
-          git clone https://${{ secrets.ASSEMBLA_USERNAME }}:${{ secrets.ASSEMBLA_TOKEN }}@git.assembla.com/jagadeesh12/Test.test.git repo
+          git clone https://${{ github.event.inputs.source_username }}:${{ github.event.inputs.source_token }}@${{ github.event.inputs.source_repo }} repo
           cd repo
           git checkout ${{ github.event.inputs.source_branch }}
 
@@ -35,14 +59,14 @@ jobs:
       - name: Setup target credentials securely
         run: |
           cat <<EOF > ~/.git-credentials
-          https://${{ secrets.TARGET_USERNAME }}:${{ secrets.TARGET_TOKEN }}@github.com/ORG/REPO.git
+          https://${{ github.event.inputs.target_username }}:${{ github.event.inputs.target_token }}@${{ github.event.inputs.target_repo }}
           EOF
           git config --global credential.helper store
 
       - name: Add target remote
         run: |
           cd repo
-          git remote add target https://github.com/ORG/REPO.git
+          git remote add target https://${{ github.event.inputs.target_repo }}
 
       - name: Fetch target
         run: |
